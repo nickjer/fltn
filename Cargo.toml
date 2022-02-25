@@ -1,0 +1,31 @@
+[package]
+name = "fltn"
+version = "0.1.0"
+authors = ["Jeremy Nicklas <jeremywnicklas@gmail.com>"]
+edition = "2021"
+description = "Flattens a serialized data structure making it greppable"
+license = "MIT"
+keywords = ["gron", "json", "yaml"]
+homepage = "https://github.com/nickjer/fltn"
+repository = "https://github.com/nickjer/fltn"
+readme = "README.md"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "3.1", features = ["derive"] }
+colored = "2.0"
+csv = "1.1"
+mime = "0.3"
+mime_guess = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order", "unbounded_depth"] }
+serde_stacker = "0.1"
+serde_yaml = "0.8"
+toml = "0.5"
+unicode_categories = "0.1"
+
+[profile.release]
+lto = true
+codegen-units = 1

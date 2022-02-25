@@ -1,0 +1,45 @@
+---
+name: Continuous integration
+on: [push, pull_request]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: sudo apt-get install -y libdbus-1-dev
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: rustfmt
+      - name: Cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+      - name: Cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+      - name: Cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+      - name: Rename binary
+        run: mv target/debug/fltn fltn-${{ github.sha }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: fltn
+          path: fltn-${{ github.sha }}
