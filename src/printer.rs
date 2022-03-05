@@ -12,11 +12,11 @@ impl Printer {
         Self { sort }
     }
 
-    pub fn print(&self, value: Value) {
+    pub fn print(&self, value: &Value) {
         let l_brace = self.brace_color("[");
         let r_brace = self.brace_color("]");
 
-        let mut stack: Vec<(String, Value)> = vec![(self.field_color("json").to_string(), value)];
+        let mut stack: Vec<(String, &Value)> = vec![(self.field_color("json").to_string(), value)];
 
         loop {
             let (prefix, value) = match stack.pop() {
@@ -31,41 +31,38 @@ impl Printer {
                 Value::Number(value) => {
                     println!("{prefix} = {};", self.number_color(value))
                 }
-                Value::String(_) => {
+                Value::String(value) => {
                     println!(
                         "{prefix} = {};",
-                        self.string_color(serde_json::to_string(&value).unwrap())
+                        self.string_color(serde_json::to_string(value).unwrap())
                     )
                 }
                 Value::Array(list) => {
                     println!("{prefix} = {l_brace}{r_brace};");
-                    list.into_iter()
-                        .enumerate()
-                        .rev()
-                        .for_each(|(index, value)| {
-                            let new_prefix =
-                                format!("{prefix}{l_brace}{}{r_brace}", self.number_color(index));
-                            stack.push((new_prefix, value))
-                        });
+                    list.iter().enumerate().rev().for_each(|(index, value)| {
+                        let new_prefix =
+                            format!("{prefix}{l_brace}{}{r_brace}", self.number_color(index));
+                        stack.push((new_prefix, value))
+                    });
                 }
                 Value::Object(object) => {
                     println!("{prefix} = {};", self.brace_color("{}"));
                     let object_iter = move |sort: bool| -> Box<dyn DoubleEndedIterator<Item = _>> {
                         if sort {
                             let mut pairs: Vec<_> = object.into_iter().collect();
-                            pairs.sort_by(|pair_1, pair_2| pair_1.0.cmp(&pair_2.0));
+                            pairs.sort_by(|pair_1, pair_2| pair_1.0.cmp(pair_2.0));
                             Box::new(pairs.into_iter())
                         } else {
                             Box::new(object.into_iter())
                         }
                     };
                     object_iter(self.sort).rev().for_each(|(key, value)| {
-                        let new_prefix = if self.valid_field_name(&key) {
+                        let new_prefix = if self.valid_field_name(key) {
                             format!("{prefix}.{}", self.field_color(key))
                         } else {
                             format!(
                                 "{prefix}{l_brace}{}{r_brace}",
-                                self.string_color(serde_json::to_string(&key).unwrap()),
+                                self.string_color(serde_json::to_string(key).unwrap()),
                             )
                         };
                         stack.push((new_prefix, value));

@@ -39,6 +39,6 @@ fn main() -> Result<()> {
 
     let value = Deserializer::new(input, format).deserialize()?;
     let printer = Printer::new(cli.sort);
-    printer.print(value);
+    printer.print(&value);
     Ok(())
 }
