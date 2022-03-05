@@ -1,7 +1,7 @@
 # Flatten
 
 [![Latest Version](https://img.shields.io/crates/v/fltn.svg)](https://crates.io/crates/fltn)
-[![Downloads](https://img.shields.io/github/downloads/fltn/total.svg)](https://github.com/nickjer/fltn/releases)
+[![Downloads](https://img.shields.io/github/downloads/nickjer/fltn/total.svg)](https://github.com/nickjer/fltn/releases)
 [![License](https://img.shields.io/github/license/nickjer/fltn.svg)](https://github.com/nickjer/fltn)
 [![Continuous Integration Status](https://github.com/nickjer/fltn/workflows/Continuous%20integration/badge.svg)](https://github.com/nickjer/fltn/actions)
 
