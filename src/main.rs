@@ -1,8 +1,10 @@
+mod color;
 mod deserializer;
 mod format;
 mod input;
 mod printer;
 
+use crate::color::Color;
 use crate::deserializer::Deserializer;
 use crate::format::Format;
 use crate::input::Input;
@@ -22,6 +24,10 @@ struct Cli {
     #[clap(short, long, arg_enum)]
     format: Option<Format>,
 
+    /// When to use colors
+    #[clap(short, long, arg_enum, value_name = "WHEN", default_value_t = Color::Auto)]
+    color: Color,
+
     /// Sort output
     #[clap(short, long)]
     sort: bool,
@@ -29,6 +35,7 @@ struct Cli {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+    cli.color.set_color();
 
     let input = Input::try_from(cli.file)?;
 
