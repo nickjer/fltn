@@ -1,5 +1,7 @@
+use anyhow::Result;
 use colored::Colorize;
 use serde_json::Value;
+use std::io::Write;
 use unicode_categories::UnicodeCategories;
 
 #[derive(Debug)]
@@ -12,7 +14,7 @@ impl Printer {
         Self { sort }
     }
 
-    pub fn print(&self, value: &Value) {
+    pub fn print(&self, writer: &mut impl Write, value: &Value) -> Result<()> {
         let l_brace = self.brace_color("[");
         let r_brace = self.brace_color("]");
 
@@ -21,24 +23,21 @@ impl Printer {
         loop {
             let (prefix, value) = match stack.pop() {
                 Some(args) => args,
-                None => return,
+                None => return Ok(()),
             };
             match value {
-                Value::Null => println!("{prefix} = {};", self.null_color("null")),
-                Value::Bool(value) => {
-                    println!("{prefix} = {};", self.bool_color(value))
-                }
+                Value::Null => writeln!(writer, "{prefix} = {};", self.null_color("null"))?,
+                Value::Bool(value) => writeln!(writer, "{prefix} = {};", self.bool_color(value))?,
                 Value::Number(value) => {
-                    println!("{prefix} = {};", self.number_color(value))
+                    writeln!(writer, "{prefix} = {};", self.number_color(value))?
                 }
-                Value::String(value) => {
-                    println!(
-                        "{prefix} = {};",
-                        self.string_color(serde_json::to_string(value).unwrap())
-                    )
-                }
+                Value::String(value) => writeln!(
+                    writer,
+                    "{prefix} = {};",
+                    self.string_color(serde_json::to_string(value).unwrap())
+                )?,
                 Value::Array(list) => {
-                    println!("{prefix} = {l_brace}{r_brace};");
+                    writeln!(writer, "{prefix} = {l_brace}{r_brace};")?;
                     list.iter().enumerate().rev().for_each(|(index, value)| {
                         let new_prefix =
                             format!("{prefix}{l_brace}{}{r_brace}", self.number_color(index));
@@ -46,7 +45,7 @@ impl Printer {
                     });
                 }
                 Value::Object(object) => {
-                    println!("{prefix} = {};", self.brace_color("{}"));
+                    writeln!(writer, "{prefix} = {};", self.brace_color("{}"))?;
                     let object_iter = move |sort: bool| -> Box<dyn DoubleEndedIterator<Item = _>> {
                         if sort {
                             let mut pairs: Vec<_> = object.into_iter().collect();

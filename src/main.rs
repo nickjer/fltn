@@ -46,6 +46,17 @@ fn main() -> Result<()> {
 
     let value = Deserializer::new(input, format).deserialize()?;
     let printer = Printer::new(cli.sort);
-    printer.print(&value);
+
+    let mut stdout = std::io::stdout().lock();
+    printer.print(&mut stdout, &value).or_else(|error| {
+        match error.root_cause().downcast_ref::<std::io::Error>() {
+            Some(io_error) => match io_error.kind() {
+                std::io::ErrorKind::BrokenPipe => Ok(()),
+                _ => Err(error),
+            },
+            None => Err(error),
+        }
+    })?;
+
     Ok(())
 }
