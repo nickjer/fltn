@@ -14,16 +14,19 @@ Inspired heavily by the amazing [gron] CLI.
 
 [gron]: https://github.com/tomnomnom/gron
 
+## Pre-compiled Binaries
+
+You can download and run the [pre-compiled binaries] to get up and running
+immediately.
+
+[pre-compiled binaries]: https://github.com/nickjer/fltn/releases
+
 ## Installation
 
-Install using [cargo]:
+An alternative is to install using [cargo]:
 
 ```shell
 cargo install fltn
 ```
 
-## Pre-compiled Binaries
-
-An alternative method is to download and run the pre-compiled binaries:
-
-https://github.com/nickjer/fltn/releases
+[cargo]: https://doc.rust-lang.org/cargo/
