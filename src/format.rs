@@ -1,6 +1,6 @@
-use clap::ArgEnum;
+use clap::ValueEnum;
 
-#[derive(Debug, Copy, Clone, ArgEnum)]
+#[derive(Debug, Copy, Clone, ValueEnum)]
 pub enum Format {
     Csv,
     Json,

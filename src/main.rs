@@ -17,15 +17,14 @@ use clap::Parser;
 #[clap(author, version, about, long_about = None)]
 struct Cli {
     /// The serialized data file to be parsed
-    #[clap(parse(from_os_str))]
     file: Option<std::path::PathBuf>,
 
     /// Format of serialized data
-    #[clap(short, long, arg_enum)]
+    #[clap(short, long, value_enum)]
     format: Option<Format>,
 
     /// When to use colors
-    #[clap(short, long, arg_enum, value_name = "WHEN", default_value_t = Color::Auto)]
+    #[clap(short, long, value_enum, value_name = "WHEN", default_value_t = Color::Auto)]
     color: Color,
 
     /// Sort output
