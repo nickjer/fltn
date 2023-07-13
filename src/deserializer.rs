@@ -33,8 +33,9 @@ impl Deserializer {
             .into_deserialize()
             .map(|result| {
                 result
-                    .map(serde_json::map::Map::from)
-                    .map(Value::Object)
+                    .map(|record: std::collections::HashMap<String, String>| {
+                        serde_json::to_value(record).unwrap()
+                    })
                     .context("In CSV deserializer")
             })
             .collect();
@@ -57,5 +58,33 @@ impl Deserializer {
     fn deserialize_yaml(&self) -> Result<Value> {
         let contents = self.input.contents();
         serde_yaml::from_str(contents).context("In YAML deserializer")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+    use crate::format::Format;
+    use crate::input::Input;
+
+    #[test]
+    fn deserialize_csv_numbers_as_strings() {
+        let csv = String::from(
+            "zip,state\n\
+            \"02345\",OH\n\
+            13003,AL\n",
+        );
+        let json = Deserializer::new(Input::Stdin(csv), Format::Csv)
+            .deserialize()
+            .unwrap();
+
+        let expected_json = json!([
+            { "zip": "02345", "state": "OH" },
+            { "zip": "13003", "state": "AL" }
+        ]);
+
+        assert_eq!(json, expected_json);
     }
 }
