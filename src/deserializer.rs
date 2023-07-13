@@ -27,14 +27,32 @@ impl Deserializer {
     }
 
     fn deserialize_csv(&self) -> Result<Value> {
+        fn trim_quotes(input: String) -> String {
+            let len = input.len();
+            if len > 1 && input.starts_with('"') && input.ends_with('"') {
+                input[1..len - 1].to_owned()
+            } else {
+                input
+            }
+        }
+
         let contents = self.input.contents();
-        let reader = csv::Reader::from_reader(contents.as_bytes());
+        let reader = csv::ReaderBuilder::new()
+            .trim(csv::Trim::All)
+            .quoting(false)
+            .from_reader(contents.as_bytes());
         let rows_result: Result<Vec<_>> = reader
             .into_deserialize()
             .map(|result| {
                 result
-                    .map(|record: std::collections::HashMap<String, String>| {
-                        serde_json::to_value(record).unwrap()
+                    .map(|mut record: std::collections::HashMap<String, String>| {
+                        let mut json_map = serde_json::Map::new();
+                        record.drain().for_each(|(key, val)| {
+                            let key = trim_quotes(key);
+                            let val = serde_json::Value::String(trim_quotes(val));
+                            json_map.insert(key, val);
+                        });
+                        serde_json::Value::Object(json_map)
                     })
                     .context("In CSV deserializer")
             })
@@ -83,6 +101,48 @@ mod tests {
         let expected_json = json!([
             { "zip": "02345", "state": "OH" },
             { "zip": "13003", "state": "AL" }
+        ]);
+
+        assert_eq!(json, expected_json);
+    }
+
+    #[test]
+    fn deserialize_csv_and_trim_whitespace() {
+        let csv = String::from(
+            "month, day\n\
+            JAN, 01\n\
+            FEB, 06\n\
+            MAR, 31\n",
+        );
+        let json = Deserializer::new(Input::Stdin(csv), Format::Csv)
+            .deserialize()
+            .unwrap();
+
+        let expected_json = json!([
+            { "month": "JAN", "day": "01" },
+            { "month": "FEB", "day": "06" },
+            { "month": "MAR", "day": "31" }
+        ]);
+
+        assert_eq!(json, expected_json);
+    }
+
+    #[test]
+    fn deserialize_csv_and_ignores_quotes() {
+        let csv = String::from(
+            "\"month\", \"day\"\n  \
+            \"JAN\",  \"01\"\n  \
+            \"FEB\",  \"06\"\n  \
+            \"MAR\",  \"31\"\n",
+        );
+        let json = Deserializer::new(Input::Stdin(csv), Format::Csv)
+            .deserialize()
+            .unwrap();
+
+        let expected_json = json!([
+            { "month": "JAN", "day": "01" },
+            { "month": "FEB", "day": "06" },
+            { "month": "MAR", "day": "31" }
         ]);
 
         assert_eq!(json, expected_json);
