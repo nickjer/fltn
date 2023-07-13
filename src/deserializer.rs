@@ -38,9 +38,6 @@ impl Deserializer {
 
         let contents = self.input.contents();
         let reader = csv::ReaderBuilder::new()
-            .trim(csv::Trim::All)
-            .quoting(false)
-            .flexible(true)
             .from_reader(contents.as_bytes());
         let rows_result: Result<Vec<_>> = reader
             .into_deserialize()
@@ -102,48 +99,6 @@ mod tests {
         let expected_json = json!([
             { "zip": "02345", "state": "OH" },
             { "zip": "13003", "state": "AL" }
-        ]);
-
-        assert_eq!(json, expected_json);
-    }
-
-    #[test]
-    fn deserialize_csv_and_trim_whitespace() {
-        let csv = String::from(
-            "month, day\n\
-            JAN, 01\n\
-            FEB, 06\n\
-            MAR, 31\n",
-        );
-        let json = Deserializer::new(Input::Stdin(csv), Format::Csv)
-            .deserialize()
-            .unwrap();
-
-        let expected_json = json!([
-            { "month": "JAN", "day": "01" },
-            { "month": "FEB", "day": "06" },
-            { "month": "MAR", "day": "31" }
-        ]);
-
-        assert_eq!(json, expected_json);
-    }
-
-    #[test]
-    fn deserialize_csv_and_ignores_quotes() {
-        let csv = String::from(
-            "\"month\", \"day\"\n  \
-            \"JAN\",  \"01\"\n  \
-            \"FEB\",  \"06\"\n  \
-            \"MAR\",  \"31\"\n",
-        );
-        let json = Deserializer::new(Input::Stdin(csv), Format::Csv)
-            .deserialize()
-            .unwrap();
-
-        let expected_json = json!([
-            { "month": "JAN", "day": "01" },
-            { "month": "FEB", "day": "06" },
-            { "month": "MAR", "day": "31" }
         ]);
 
         assert_eq!(json, expected_json);
