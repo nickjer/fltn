@@ -40,6 +40,7 @@ impl Deserializer {
         let reader = csv::ReaderBuilder::new()
             .trim(csv::Trim::All)
             .quoting(false)
+            .flexible(true)
             .from_reader(contents.as_bytes());
         let rows_result: Result<Vec<_>> = reader
             .into_deserialize()
