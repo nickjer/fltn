@@ -37,8 +37,7 @@ impl Deserializer {
         }
 
         let contents = self.input.contents();
-        let reader = csv::ReaderBuilder::new()
-            .from_reader(contents.as_bytes());
+        let reader = csv::ReaderBuilder::new().from_reader(contents.as_bytes());
         let rows_result: Result<Vec<_>> = reader
             .into_deserialize()
             .map(|result| {
