@@ -12,6 +12,10 @@ A command line interface (CLI) used to flatten a serialized data structure
 
 Inspired heavily by the amazing [gron] CLI.
 
+With added features such as support for JSONPath filtering...
+
+![Screenshot of json filtering](media/screenshot_2.png)
+
 [gron]: https://github.com/tomnomnom/gron
 
 ## Pre-compiled Binaries
