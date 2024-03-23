@@ -5,11 +5,14 @@ on: [push, pull_request]
 jobs:
   ci:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
     steps:
-      - name: Install dependencies
-        run: sudo apt-get install -y libdbus-1-dev
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -17,29 +20,36 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
           components: rustfmt
       - name: Cargo build
         uses: actions-rs/cargo@v1
         with:
+          use-cross: true
           command: build
+          args: --target ${{ matrix.target }}
       - name: Cargo test
         uses: actions-rs/cargo@v1
         with:
+          use-cross: true
           command: test
+          args: --target ${{ matrix.target }}
       - name: Cargo fmt
         uses: actions-rs/cargo@v1
         with:
+          use-cross: true
           command: fmt
           args: --all -- --check
       - name: Rename binary
-        run: mv target/debug/fltn fltn-${{ github.sha }}
+        run: mv target/${{ matrix.target }}/debug/fltn fltn-${{ github.sha }}-${{ matrix.target }}
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
-          name: fltn
-          path: fltn-${{ github.sha }}
+          name: fltn-${{ matrix.target }}
+          path: fltn-${{ github.sha }}-${{ matrix.target }}

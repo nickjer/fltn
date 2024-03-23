@@ -6,33 +6,8 @@ on:
       - 'v*' # Push events to matching v*, i.e., v1.0
 
 jobs:
-  create_release:
+  release:
     name: Create release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v1
-      - name: Create release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-      - name: Output release URL file
-        run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
-      - name: Upload release URL file
-        uses: actions/upload-artifact@v2
-        with:
-          name: release_url
-          path: release_url.txt
-
-  build_assets:
-    name: Build release assets
-    needs: create_release
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -40,8 +15,8 @@ jobs:
           - x86_64-unknown-linux-gnu
           - x86_64-unknown-linux-musl
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -49,40 +24,19 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          override: true
-      - uses: actions-rs/cargo@v1
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cargo build
+        uses: actions-rs/cargo@v1
         with:
           use-cross: true
           command: build
-          args: --target ${{ matrix.target }} --release
-      - name: Download release URL file
-        uses: actions/download-artifact@v2
-        with:
-          name: release_url
-      - name: Get release file name and upload URL
-        id: get_release_info
-        run: |
-          echo ::set-output name=file_name::${REPOSITORY_NAME##*/}-${TAG_REF_NAME#refs/tags/}-${TARGET_NAME}
-          echo ::set-output name=upload_url::$(cat release_url.txt)
-        env:
-          TAG_REF_NAME: ${{ github.ref }}
-          REPOSITORY_NAME: ${{ github.repository }}
-          TARGET_NAME: ${{ matrix.target }}
-      - name: Strip symbols from asset
-        run: strip target/${{ matrix.target }}/release/fltn
+          args: --target ${{ matrix.target }} --release --jobs 2
       - name: Compress asset
-        run: tar -C target/${{ matrix.target }}/release -czf fltn.tar.gz fltn
-      - name: Upload artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tar -C target/${{ matrix.target }}/release \
+            -czf "fltn-${{ github.ref_name }}-${{ matrix.target }}.tar.gz" \
+            fltn
+      - name: Release
+        uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ steps.get_release_info.outputs.upload_url }}
-          asset_path: ./fltn.tar.gz
-          asset_name: ${{ steps.get_release_info.outputs.file_name }}.tar.gz
-          asset_content_type: application/gzip
+          files: "fltn-*.tar.gz"
