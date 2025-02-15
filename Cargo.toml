@@ -15,7 +15,7 @@ readme = "README.md"
 [dependencies]
 anyhow = "1.0"
 clap = { version = "4.3", features = ["derive"] }
-colored = "2.0"
+colored = "3.0"
 csv = "1.2"
 jsonpath-rust = "0.7"
 mime = "0.3"
