@@ -1,6 +1,6 @@
 [package]
 name = "fltn"
-version = "0.2.6"
+version = "0.2.7"
 authors = ["Jeremy Nicklas <jeremywnicklas@gmail.com>"]
 edition = "2021"
 description = "Flattens a serialized data structure making it greppable"
