@@ -12,7 +12,7 @@ use crate::printer::Printer;
 
 use anyhow::{Error, Result};
 use clap::Parser;
-use jsonpath_rust::JsonPathQuery;
+use jsonpath_rust::JsonPath;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -50,7 +50,13 @@ fn main() -> Result<()> {
 
     let value = Deserializer::new(input, format).deserialize()?;
     let filtered_value = match cli.path {
-        Some(path) => value.path(&path).map_err(Error::msg)?,
+        Some(path) => value
+            .query(&path)
+            .map_err(Error::msg)?
+            .into_iter()
+            .cloned()
+            .collect::<Vec<_>>()
+            .into(),
         None => value,
     };
     let printer = Printer::new(cli.sort);
