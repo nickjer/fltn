@@ -17,6 +17,7 @@ anyhow = "1.0"
 clap = { version = "4.3", features = ["derive"] }
 colored = "3.0"
 csv = "1.2"
+indexmap = { version = "2.10", features = ["serde"] }
 jsonpath-rust = "1.0"
 mime = "0.3"
 mime_guess = "2.0"

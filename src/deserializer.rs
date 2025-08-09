@@ -42,9 +42,9 @@ impl Deserializer {
             .into_deserialize()
             .map(|result| {
                 result
-                    .map(|mut record: std::collections::HashMap<String, String>| {
+                    .map(|record: indexmap::IndexMap<String, String>| {
                         let mut json_map = serde_json::Map::new();
-                        record.drain().for_each(|(key, val)| {
+                        record.into_iter().for_each(|(key, val)| {
                             let key = trim_quotes(key);
                             let val = serde_json::Value::String(trim_quotes(val));
                             json_map.insert(key, val);
