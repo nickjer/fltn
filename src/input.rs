@@ -29,16 +29,16 @@ impl std::convert::TryFrom<Option<std::path::PathBuf>> for Input {
     type Error = Error;
 
     fn try_from(path: Option<std::path::PathBuf>) -> Result<Self> {
-        let mut buffer = String::new();
         match path {
             None => {
+                let mut buffer = String::new();
                 std::io::stdin()
                     .read_to_string(&mut buffer)
                     .context("Failed to read from stdin")?;
                 Ok(Input::Stdin(buffer))
             }
             Some(path) => {
-                buffer = std::fs::read_to_string(&path)
+                let buffer = std::fs::read_to_string(&path)
                     .with_context(|| format!("Failed to read {path:?}"))?;
                 Ok(Input::File(path, buffer))
             }

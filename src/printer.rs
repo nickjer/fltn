@@ -15,117 +15,102 @@ impl Printer {
     }
 
     pub fn print(&self, writer: &mut impl Write, value: &Value) -> Result<()> {
-        let l_brace = self.brace_color("[");
-        let r_brace = self.brace_color("]");
+        let l_brace = brace_color("[");
+        let r_brace = brace_color("]");
 
-        let mut stack: Vec<(String, &Value)> = vec![(self.field_color("json").to_string(), value)];
+        let mut stack: Vec<(String, &Value)> = vec![(field_color("json").to_string(), value)];
 
-        loop {
-            let (prefix, value) = match stack.pop() {
-                Some(args) => args,
-                None => return Ok(()),
-            };
+        while let Some((prefix, value)) = stack.pop() {
             match value {
-                Value::Null => writeln!(writer, "{prefix} = {};", self.null_color("null"))?,
-                Value::Bool(value) => writeln!(writer, "{prefix} = {};", self.bool_color(value))?,
+                Value::Null => writeln!(writer, "{prefix} = {};", null_color("null"))?,
+                Value::Bool(value) => writeln!(writer, "{prefix} = {};", bool_color(value))?,
                 Value::Number(value) => {
-                    writeln!(writer, "{prefix} = {};", self.number_color(value))?
+                    writeln!(writer, "{prefix} = {};", number_color(value))?
                 }
                 Value::String(value) => writeln!(
                     writer,
                     "{prefix} = {};",
-                    self.string_color(serde_json::to_string(value).unwrap())
+                    string_color(serde_json::to_string(value).unwrap())
                 )?,
                 Value::Array(list) => {
                     writeln!(writer, "{prefix} = {l_brace}{r_brace};")?;
-                    list.iter().enumerate().rev().for_each(|(index, value)| {
-                        let new_prefix =
-                            format!("{prefix}{l_brace}{}{r_brace}", self.number_color(index));
-                        stack.push((new_prefix, value))
-                    });
+                    for (index, value) in list.iter().enumerate().rev() {
+                        let new_prefix = format!("{prefix}{l_brace}{}{r_brace}", number_color(index));
+                        stack.push((new_prefix, value));
+                    }
                 }
                 Value::Object(object) => {
-                    writeln!(writer, "{prefix} = {};", self.brace_color("{}"))?;
-                    let object_iter = move |sort: bool| -> Box<dyn DoubleEndedIterator<Item = _>> {
-                        if sort {
-                            let mut pairs: Vec<_> = object.into_iter().collect();
-                            pairs.sort_by(|pair_1, pair_2| pair_1.0.cmp(pair_2.0));
-                            Box::new(pairs.into_iter())
-                        } else {
-                            Box::new(object.into_iter())
-                        }
-                    };
-                    object_iter(self.sort).rev().for_each(|(key, value)| {
-                        let new_prefix = if self.valid_field_name(key) {
-                            format!("{prefix}.{}", self.field_color(key))
+                    writeln!(writer, "{prefix} = {};", brace_color("{}"))?;
+                    let mut pairs: Vec<_> = object.iter().collect();
+                    if self.sort {
+                        pairs.sort_by_key(|(k, _)| *k);
+                    }
+                    for (key, value) in pairs.into_iter().rev() {
+                        let new_prefix = if valid_field_name(key) {
+                            format!("{prefix}.{}", field_color(key))
                         } else {
                             format!(
                                 "{prefix}{l_brace}{}{r_brace}",
-                                self.string_color(serde_json::to_string(key).unwrap()),
+                                string_color(serde_json::to_string(key).unwrap()),
                             )
                         };
                         stack.push((new_prefix, value));
-                    })
+                    }
                 }
-            };
-        }
-    }
-
-    fn bool_color<T: ToString>(&self, value: T) -> colored::ColoredString {
-        value.to_string().cyan()
-    }
-
-    fn brace_color<T: ToString>(&self, value: T) -> colored::ColoredString {
-        value.to_string().magenta()
-    }
-
-    fn field_color<T: ToString>(&self, value: T) -> colored::ColoredString {
-        value.to_string().blue().bold()
-    }
-
-    fn null_color<T: ToString>(&self, value: T) -> colored::ColoredString {
-        value.to_string().cyan()
-    }
-
-    fn number_color<T: ToString>(&self, value: T) -> colored::ColoredString {
-        value.to_string().red()
-    }
-
-    fn string_color<T: ToString>(&self, value: T) -> colored::ColoredString {
-        value.to_string().yellow()
-    }
-
-    fn valid_field_name(&self, field_name: &str) -> bool {
-        if field_name.is_empty() {
-            return false;
-        }
-
-        field_name.chars().enumerate().all(|(idx, letter)| {
-            if idx == 0 {
-                self.valid_first_field_letter(letter)
-            } else {
-                self.valid_following_field_letter(letter)
             }
-        })
+        }
+        Ok(())
     }
+}
 
-    fn valid_first_field_letter(&self, letter: char) -> bool {
-        letter.is_letter_lowercase()
-            || letter.is_letter_modifier()
-            || letter.is_letter_other()
-            || letter.is_letter_uppercase()
-            || letter.is_number_letter()
-            || letter == '$'
-            || letter == '_'
-    }
+fn bool_color(value: impl ToString) -> colored::ColoredString {
+    value.to_string().cyan()
+}
 
-    fn valid_following_field_letter(&self, letter: char) -> bool {
-        self.valid_first_field_letter(letter)
-            || letter.is_mark_nonspacing()
-            || letter.is_mark_spacing_combining()
-            || letter.is_number_decimal_digit()
-            || letter.is_punctuation_connector()
+fn brace_color(value: impl ToString) -> colored::ColoredString {
+    value.to_string().magenta()
+}
+
+fn field_color(value: impl ToString) -> colored::ColoredString {
+    value.to_string().blue().bold()
+}
+
+fn null_color(value: impl ToString) -> colored::ColoredString {
+    value.to_string().cyan()
+}
+
+fn number_color(value: impl ToString) -> colored::ColoredString {
+    value.to_string().red()
+}
+
+fn string_color(value: impl ToString) -> colored::ColoredString {
+    value.to_string().yellow()
+}
+
+fn valid_field_name(field_name: &str) -> bool {
+    let mut chars = field_name.chars();
+    match chars.next() {
+        None => false,
+        Some(first) => valid_first_field_letter(first) && chars.all(valid_following_field_letter),
     }
+}
+
+fn valid_first_field_letter(letter: char) -> bool {
+    letter.is_letter_lowercase()
+        || letter.is_letter_modifier()
+        || letter.is_letter_other()
+        || letter.is_letter_uppercase()
+        || letter.is_number_letter()
+        || letter == '$'
+        || letter == '_'
+}
+
+fn valid_following_field_letter(letter: char) -> bool {
+    valid_first_field_letter(letter)
+        || letter.is_mark_nonspacing()
+        || letter.is_mark_spacing_combining()
+        || letter.is_number_decimal_digit()
+        || letter.is_punctuation_connector()
 }
 
 #[cfg(test)]
@@ -314,28 +299,25 @@ mod tests {
     // Valid field name helper tests
     #[test]
     fn valid_field_name_simple() {
-        let printer = Printer::new(false);
-        assert!(printer.valid_field_name("name"));
-        assert!(printer.valid_field_name("Name"));
-        assert!(printer.valid_field_name("_name"));
-        assert!(printer.valid_field_name("$name"));
-        assert!(printer.valid_field_name("name123"));
+        assert!(valid_field_name("name"));
+        assert!(valid_field_name("Name"));
+        assert!(valid_field_name("_name"));
+        assert!(valid_field_name("$name"));
+        assert!(valid_field_name("name123"));
     }
 
     #[test]
     fn invalid_field_name_cases() {
-        let printer = Printer::new(false);
-        assert!(!printer.valid_field_name(""));
-        assert!(!printer.valid_field_name("123"));
-        assert!(!printer.valid_field_name("field-name"));
-        assert!(!printer.valid_field_name("field name"));
-        assert!(!printer.valid_field_name("field.name"));
+        assert!(!valid_field_name(""));
+        assert!(!valid_field_name("123"));
+        assert!(!valid_field_name("field-name"));
+        assert!(!valid_field_name("field name"));
+        assert!(!valid_field_name("field.name"));
     }
 
     #[test]
     fn valid_field_name_unicode() {
-        let printer = Printer::new(false);
-        assert!(printer.valid_field_name("名前")); // Japanese
-        assert!(printer.valid_field_name("имя")); // Russian
+        assert!(valid_field_name("名前")); // Japanese
+        assert!(valid_field_name("имя")); // Russian
     }
 }

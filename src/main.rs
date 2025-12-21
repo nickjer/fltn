@@ -1,11 +1,9 @@
 mod color;
-mod deserializer;
 mod format;
 mod input;
 mod printer;
 
 use crate::color::Color;
-use crate::deserializer::Deserializer;
 use crate::format::Format;
 use crate::input::Input;
 use crate::printer::Printer;
@@ -48,7 +46,7 @@ fn main() -> Result<()> {
         .or_else(|| input.guess_format())
         .unwrap_or(Format::Json);
 
-    let value = Deserializer::new(input, format).deserialize()?;
+    let value = format.deserialize(input.contents())?;
     let filtered_value = match cli.path {
         Some(path) => value
             .query(&path)
@@ -62,17 +60,17 @@ fn main() -> Result<()> {
     let printer = Printer::new(cli.sort);
 
     let mut stdout = std::io::stdout().lock();
-    printer
-        .print(&mut stdout, &filtered_value)
-        .or_else(
-            |error| match error.root_cause().downcast_ref::<std::io::Error>() {
-                Some(io_error) => match io_error.kind() {
-                    std::io::ErrorKind::BrokenPipe => Ok(()),
-                    _ => Err(error),
-                },
-                None => Err(error),
-            },
-        )?;
+    printer.print(&mut stdout, &filtered_value).or_else(|error| {
+        let is_broken_pipe = error
+            .root_cause()
+            .downcast_ref::<std::io::Error>()
+            .is_some_and(|e| e.kind() == std::io::ErrorKind::BrokenPipe);
+        if is_broken_pipe {
+            Ok(())
+        } else {
+            Err(error)
+        }
+    })?;
 
     Ok(())
 }
