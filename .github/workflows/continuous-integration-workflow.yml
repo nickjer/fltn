@@ -8,21 +8,29 @@ jobs:
     strategy:
       matrix:
         include:
-          - build: linux
+          - build: linux-gnu
             os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-          - build: linux
+          - build: linux-musl
             os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-          - build: macos
+          - build: linux-arm64
+            os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+          - build: macos-x86
             os: macos-latest
             target: x86_64-apple-darwin
+          - build: macos-arm64
+            os: macos-latest
+            target: aarch64-apple-darwin
     steps:
       - uses: actions/checkout@v6
       - uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/bin/
+            ~/.cargo/.crates.toml
+            ~/.cargo/.crates2.json
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
@@ -31,25 +39,18 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
-          components: rustfmt
-      - name: Cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: true
-          command: build
-          args: --target ${{ matrix.target }}
-      - name: Cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: true
-          command: test
-          args: --target ${{ matrix.target }}
-      - name: Cargo fmt
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: true
-          command: fmt
-          args: --all -- --check
+          components: rustfmt, clippy
+      - name: Install musl-tools
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - name: Build
+        run: cargo build --target ${{ matrix.target }}
+      - name: Test
+        run: cargo test --target ${{ matrix.target }}
+      - name: Clippy
+        run: cargo clippy --target ${{ matrix.target }} -- -D warnings
+      - name: Format check
+        run: cargo fmt --all -- --check
       - name: Rename binary
         run: mv target/${{ matrix.target }}/debug/fltn fltn-${{ github.sha }}-${{ matrix.target }}
       - name: Upload artifact
