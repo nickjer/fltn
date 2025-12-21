@@ -127,3 +127,215 @@ impl Printer {
             || letter.is_punctuation_connector()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn print_to_string(value: &Value, sort: bool) -> String {
+        // Disable colors for predictable test output
+        colored::control::set_override(false);
+        let printer = Printer::new(sort);
+        let mut buffer = Vec::new();
+        printer.print(&mut buffer, value).unwrap();
+        String::from_utf8(buffer).unwrap()
+    }
+
+    // Basic value tests
+    #[test]
+    fn print_null() {
+        let output = print_to_string(&json!(null), false);
+        assert_eq!(output, "json = null;\n");
+    }
+
+    #[test]
+    fn print_bool_true() {
+        let output = print_to_string(&json!(true), false);
+        assert_eq!(output, "json = true;\n");
+    }
+
+    #[test]
+    fn print_bool_false() {
+        let output = print_to_string(&json!(false), false);
+        assert_eq!(output, "json = false;\n");
+    }
+
+    #[test]
+    fn print_integer() {
+        let output = print_to_string(&json!(42), false);
+        assert_eq!(output, "json = 42;\n");
+    }
+
+    #[test]
+    fn print_negative_integer() {
+        let output = print_to_string(&json!(-42), false);
+        assert_eq!(output, "json = -42;\n");
+    }
+
+    #[test]
+    fn print_float() {
+        let output = print_to_string(&json!(1.5), false);
+        assert_eq!(output, "json = 1.5;\n");
+    }
+
+    #[test]
+    fn print_string() {
+        let output = print_to_string(&json!("hello"), false);
+        assert_eq!(output, "json = \"hello\";\n");
+    }
+
+    #[test]
+    fn print_string_with_quotes() {
+        let output = print_to_string(&json!("say \"hello\""), false);
+        assert_eq!(output, "json = \"say \\\"hello\\\"\";\n");
+    }
+
+    #[test]
+    fn print_empty_string() {
+        let output = print_to_string(&json!(""), false);
+        assert_eq!(output, "json = \"\";\n");
+    }
+
+    // Array tests
+    #[test]
+    fn print_empty_array() {
+        let output = print_to_string(&json!([]), false);
+        assert_eq!(output, "json = [];\n");
+    }
+
+    #[test]
+    fn print_array_of_numbers() {
+        let output = print_to_string(&json!([1, 2, 3]), false);
+        let expected = "json = [];\njson[0] = 1;\njson[1] = 2;\njson[2] = 3;\n";
+        assert_eq!(output, expected);
+    }
+
+    #[test]
+    fn print_nested_array() {
+        let output = print_to_string(&json!([[1, 2]]), false);
+        let expected = "json = [];\njson[0] = [];\njson[0][0] = 1;\njson[0][1] = 2;\n";
+        assert_eq!(output, expected);
+    }
+
+    // Object tests
+    #[test]
+    fn print_empty_object() {
+        let output = print_to_string(&json!({}), false);
+        assert_eq!(output, "json = {};\n");
+    }
+
+    #[test]
+    fn print_simple_object() {
+        let output = print_to_string(&json!({"name": "test"}), false);
+        let expected = "json = {};\njson.name = \"test\";\n";
+        assert_eq!(output, expected);
+    }
+
+    #[test]
+    fn print_nested_object() {
+        let output = print_to_string(&json!({"outer": {"inner": 42}}), false);
+        let expected = "json = {};\njson.outer = {};\njson.outer.inner = 42;\n";
+        assert_eq!(output, expected);
+    }
+
+    #[test]
+    fn print_object_with_array() {
+        let output = print_to_string(&json!({"items": [1, 2]}), false);
+        let expected = "json = {};\njson.items = [];\njson.items[0] = 1;\njson.items[1] = 2;\n";
+        assert_eq!(output, expected);
+    }
+
+    // Field name tests (dot notation vs bracket notation)
+    #[test]
+    fn print_valid_field_name() {
+        let output = print_to_string(&json!({"validName": 1}), false);
+        assert!(output.contains("json.validName"));
+    }
+
+    #[test]
+    fn print_field_with_hyphen_uses_bracket() {
+        let output = print_to_string(&json!({"field-name": 1}), false);
+        assert!(output.contains("json[\"field-name\"]"));
+    }
+
+    #[test]
+    fn print_field_with_space_uses_bracket() {
+        let output = print_to_string(&json!({"field name": 1}), false);
+        assert!(output.contains("json[\"field name\"]"));
+    }
+
+    #[test]
+    fn print_field_starting_with_number_uses_bracket() {
+        let output = print_to_string(&json!({"123abc": 1}), false);
+        assert!(output.contains("json[\"123abc\"]"));
+    }
+
+    #[test]
+    fn print_empty_field_name_uses_bracket() {
+        let output = print_to_string(&json!({"": 1}), false);
+        assert!(output.contains("json[\"\"]"));
+    }
+
+    #[test]
+    fn print_field_with_underscore() {
+        let output = print_to_string(&json!({"_private": 1}), false);
+        assert!(output.contains("json._private"));
+    }
+
+    #[test]
+    fn print_field_with_dollar() {
+        let output = print_to_string(&json!({"$special": 1}), false);
+        assert!(output.contains("json.$special"));
+    }
+
+    // Sort tests
+    #[test]
+    fn print_object_unsorted() {
+        // With preserve_order feature, keys should maintain insertion order
+        let output = print_to_string(&json!({"z": 1, "a": 2, "m": 3}), false);
+        let lines: Vec<&str> = output.lines().collect();
+        // First line is "json = {};" so check the key order in subsequent lines
+        assert!(lines[1].contains(".z"));
+        assert!(lines[2].contains(".a"));
+        assert!(lines[3].contains(".m"));
+    }
+
+    #[test]
+    fn print_object_sorted() {
+        let output = print_to_string(&json!({"z": 1, "a": 2, "m": 3}), true);
+        let lines: Vec<&str> = output.lines().collect();
+        // When sorted, should be alphabetical
+        assert!(lines[1].contains(".a"));
+        assert!(lines[2].contains(".m"));
+        assert!(lines[3].contains(".z"));
+    }
+
+    // Valid field name helper tests
+    #[test]
+    fn valid_field_name_simple() {
+        let printer = Printer::new(false);
+        assert!(printer.valid_field_name("name"));
+        assert!(printer.valid_field_name("Name"));
+        assert!(printer.valid_field_name("_name"));
+        assert!(printer.valid_field_name("$name"));
+        assert!(printer.valid_field_name("name123"));
+    }
+
+    #[test]
+    fn invalid_field_name_cases() {
+        let printer = Printer::new(false);
+        assert!(!printer.valid_field_name(""));
+        assert!(!printer.valid_field_name("123"));
+        assert!(!printer.valid_field_name("field-name"));
+        assert!(!printer.valid_field_name("field name"));
+        assert!(!printer.valid_field_name("field.name"));
+    }
+
+    #[test]
+    fn valid_field_name_unicode() {
+        let printer = Printer::new(false);
+        assert!(printer.valid_field_name("名前")); // Japanese
+        assert!(printer.valid_field_name("имя")); // Russian
+    }
+}
