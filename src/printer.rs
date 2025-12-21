@@ -24,9 +24,7 @@ impl Printer {
             match value {
                 Value::Null => writeln!(writer, "{prefix} = {};", null_color("null"))?,
                 Value::Bool(value) => writeln!(writer, "{prefix} = {};", bool_color(value))?,
-                Value::Number(value) => {
-                    writeln!(writer, "{prefix} = {};", number_color(value))?
-                }
+                Value::Number(value) => writeln!(writer, "{prefix} = {};", number_color(value))?,
                 Value::String(value) => writeln!(
                     writer,
                     "{prefix} = {};",
@@ -35,7 +33,8 @@ impl Printer {
                 Value::Array(list) => {
                     writeln!(writer, "{prefix} = {l_brace}{r_brace};")?;
                     for (index, value) in list.iter().enumerate().rev() {
-                        let new_prefix = format!("{prefix}{l_brace}{}{r_brace}", number_color(index));
+                        let new_prefix =
+                            format!("{prefix}{l_brace}{}{r_brace}", number_color(index));
                         stack.push((new_prefix, value));
                     }
                 }

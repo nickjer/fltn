@@ -296,8 +296,10 @@ mod tests {
 
     #[test]
     fn deserialize_yaml_invalid() {
-        assert!(Format::Yaml
-            .deserialize("invalid:\n  - missing\n value")
-            .is_err());
+        assert!(
+            Format::Yaml
+                .deserialize("invalid:\n  - missing\n value")
+                .is_err()
+        );
     }
 }

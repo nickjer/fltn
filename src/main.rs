@@ -60,17 +60,15 @@ fn main() -> Result<()> {
     let printer = Printer::new(cli.sort);
 
     let mut stdout = std::io::stdout().lock();
-    printer.print(&mut stdout, &filtered_value).or_else(|error| {
-        let is_broken_pipe = error
-            .root_cause()
-            .downcast_ref::<std::io::Error>()
-            .is_some_and(|e| e.kind() == std::io::ErrorKind::BrokenPipe);
-        if is_broken_pipe {
-            Ok(())
-        } else {
-            Err(error)
-        }
-    })?;
+    printer
+        .print(&mut stdout, &filtered_value)
+        .or_else(|error| {
+            let is_broken_pipe = error
+                .root_cause()
+                .downcast_ref::<std::io::Error>()
+                .is_some_and(|e| e.kind() == std::io::ErrorKind::BrokenPipe);
+            if is_broken_pipe { Ok(()) } else { Err(error) }
+        })?;
 
     Ok(())
 }
